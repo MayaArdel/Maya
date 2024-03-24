@@ -13,8 +13,19 @@ def prepp_kjoretoy(inn_fil: Union[str, pathlib.Path]) -> pl.DataFrame:
     df = pl.read_parquet(inn_fil)
 
     # Casting av dato-kolonner.
-    # !!!! ERSTATT MED DIN KODE:
-    assert False, "Fjern denne asserten og putt inn din kode"
+    df = df.to_pandas()
+
+    df['tekn_neste_pkk'] = df['tekn_neste_pkk'].fillna("20240317")
+    df.loc[df['tekn_neste_pkk'].str.contains('[^0-9]'), 'tekn_neste_pkk'] = '20240317'
+    df['tekn_neste_pkk'] = df['tekn_neste_pkk'].astype(int)
+    df.loc[df['tekn_neste_pkk'].astype(str).str.len() < 8, 'tekn_neste_pkk'] = '20240317'
+    df['tekn_reg_f_g_n'] = pd.to_datetime(df['tekn_reg_f_g_n'], format='%Y%m%d')
+    df['tekn_neste_pkk'] = pd.to_datetime(df['tekn_neste_pkk'], format='%Y%m%d')
+    df['tekn_reg_eier_dato'] = pd.to_datetime(df['tekn_reg_eier_dato'], format='%Y%m%d')
+
+    columns_as_series = {col: pl.Series(df[col]) for col in df.columns}
+    df = pl.DataFrame(columns_as_series)
+    
 
     # Denne er viktig fordi data er ikke unikt identifisert av kolonnene våre
     # Vi får trøbbel når vi skal gjøre group by senere - noen (forskjellige) biler har identiske data.
@@ -55,8 +66,8 @@ def prepp_kjoretoy(inn_fil: Union[str, pathlib.Path]) -> pl.DataFrame:
     )
 
     # Vi lager en egen elbil-kolonne
-    # !!!! ERSTATT MED DIN KODE:
-    assert False, "Fjern denne asserten og putt inn din kode"
+    df = df.with_columns(
+    pl.when(pl.col("tekn_drivstoff") == "5").then(True).otherwise(False).alias("elbil"))
 
     # Vi vil også ha inn skriftlig beskrivelse av bilmerket
     merkekode = pl.read_csv(STATIC_DATA / "merkekode.csv", separator=";").rename(
