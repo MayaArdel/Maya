@@ -3,6 +3,7 @@ from typing import Union
 import polars as pl
 import pathlib
 import logging
+import pandas as pd
 
 THIS_FOLDER = pathlib.Path(__file__).parent
 STATIC_DATA = THIS_FOLDER / "statiske_data"
