@@ -3,7 +3,6 @@ from typing import Union
 import polars as pl
 import pathlib
 import logging
-import pandas as pd
 
 THIS_FOLDER = pathlib.Path(__file__).parent
 STATIC_DATA = THIS_FOLDER / "statiske_data"
@@ -14,18 +13,14 @@ def prepp_kjoretoy(inn_fil: Union[str, pathlib.Path]) -> pl.DataFrame:
     df = pl.read_parquet(inn_fil)
 
     # Casting av dato-kolonner.
-    df = df.to_pandas()
-
-    df['tekn_neste_pkk'] = df['tekn_neste_pkk'].fillna("20240317")
-    df.loc[df['tekn_neste_pkk'].str.contains('[^0-9]'), 'tekn_neste_pkk'] = '20240317'
-    df['tekn_neste_pkk'] = df['tekn_neste_pkk'].astype(int)
-    df.loc[df['tekn_neste_pkk'].astype(str).str.len() < 8, 'tekn_neste_pkk'] = '20240317'
-    df['tekn_reg_f_g_n'] = pd.to_datetime(df['tekn_reg_f_g_n'], format='%Y%m%d')
-    df['tekn_neste_pkk'] = pd.to_datetime(df['tekn_neste_pkk'], format='%Y%m%d')
-    df['tekn_reg_eier_dato'] = pd.to_datetime(df['tekn_reg_eier_dato'], format='%Y%m%d')
-
-    columns_as_series = {col: pl.Series(df[col]) for col in df.columns}
-    df = pl.DataFrame(columns_as_series)
+    df = df.with_columns(pl.col('tekn_neste_pkk').fill_null("20240317"))
+    df = df.with_columns(pl.when(pl.col("tekn_neste_pkk").str.contains('[^0-9]')).then(pl.lit('20240317')))
+    df = df.with_columns(df['tekn_reg_f_g_n'].cast(pl.String))
+    df = df.with_columns(pl.col("tekn_reg_f_g_n").str.to_date(format="%Y%m%d"))
+    df = df.with_columns(df['tekn_reg_eier_dato'].cast(pl.String))
+    df = df.with_columns(pl.col("tekn_reg_eier_dato").str.to_date(format="%Y%m%d"))
+    df = df.with_columns(pl.col("tekn_neste_pkk").str.to_date(format="%Y%m%d", strict=False))
+    df = df.with_columns(pl.col('tekn_neste_pkk').fill_null("20240317"))
     
 
     # Denne er viktig fordi data er ikke unikt identifisert av kolonnene våre
