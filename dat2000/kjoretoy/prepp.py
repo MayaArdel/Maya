@@ -14,13 +14,15 @@ def prepp_kjoretoy(inn_fil: Union[str, pathlib.Path]) -> pl.DataFrame:
 
     # Casting av dato-kolonner.
     df = df.with_columns(pl.col('tekn_neste_pkk').fill_null("20240317"))
-    df = df.with_columns(pl.when(pl.col("tekn_neste_pkk").str.contains('[^0-9]')).then(pl.lit('20240317')))
+    df = df.with_columns(tekn_neste_pkk=pl.when(pl.col("tekn_neste_pkk").str.contains('[^0-9]')).then(pl.lit('20240317')).otherwise("tekn_neste_pkk"))
+    df = df.with_columns(tekn_neste_pkk=pl.when(pl.col("tekn_neste_pkk").str.len_chars()<8).then(pl.lit('20240317')).otherwise("tekn_neste_pkk"))
+    df = df.with_columns(pl.col("tekn_neste_pkk").str.to_date(format="%Y%m%d"))
+
     df = df.with_columns(df['tekn_reg_f_g_n'].cast(pl.String))
     df = df.with_columns(pl.col("tekn_reg_f_g_n").str.to_date(format="%Y%m%d"))
+
     df = df.with_columns(df['tekn_reg_eier_dato'].cast(pl.String))
     df = df.with_columns(pl.col("tekn_reg_eier_dato").str.to_date(format="%Y%m%d"))
-    df = df.with_columns(pl.col("tekn_neste_pkk").str.to_date(format="%Y%m%d", strict=False))
-    df = df.with_columns(pl.col('tekn_neste_pkk').fill_null("20240317"))
     
 
     # Denne er viktig fordi data er ikke unikt identifisert av kolonnene våre
